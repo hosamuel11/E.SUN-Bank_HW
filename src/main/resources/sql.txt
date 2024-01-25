@@ -1,0 +1,4 @@
+JPA會自動建立Currency table
+INSERT INTO Currency (code, name) VALUES ('EUR', '歐元'); 
+INSERT INTO Currency (code, name) VALUES ('USD', '美元'); 
+INSERT INTO Currency (code, name) VALUES ('GBP', '新臺幣');

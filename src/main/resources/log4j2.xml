@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--日誌級別以及優先級排序: OFF > FATAL > ERROR > WARN > INFO > DEBUG > TRACE > ALL -->
+<!--Configuration後面的status，這個用於設置log4j2自身內部的信息輸出，可以不設置，當設置成trace時，你會看到log4j2內部各種詳細輸出 -->
+<!--monitorInterval：Log4j能夠自動檢測修改配置 文件和重新配置本身，設置間隔秒數 -->
+<configuration status="INFO" monitorInterval="30"> 
+	<appenders>
+		<console name="Console" target="SYSTEM_OUT"> 
+			<PatternLayout
+				pattern="%d{yyyy-MM-dd HH:mm:ss:SSS} [%p] - %l - %m%n" />
+		</console> <!--文件會列印出所有信息，這個log每次運行程序會自動清空，由append屬性決定，這個也挺有用的，適合臨時測試用 -->
+		<RollingFile name="MyFileAppender" fileName="log/ya.log"  filePattern="log/ya-%d{yyyy-MM-dd HH:mm:ss}.log" append="true">
+		
+	       <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss:SSS} [%p] - %l - %m%n"/>
+	       <Policies>
+	       	<!--當系統重啟/日期更新/超過100M將覆蓋文件-->
+	        <OnStartupTriggeringPolicy/>
+	        <SizeBasedTriggeringPolicy size="100 MB"/>
+	        <TimeBasedTriggeringPolicy/>
+	       </Policies>
+	   </RollingFile>
+	</appenders> 
+
+	<loggers> 
+		<logger name="org.springframework" level="INFO"></logger>
+		<logger name="com.cathay.aply.Controller" level="ERROR"><appender-ref ref="MyFileAppender" /></logger>
+		<Logger name="org.hibernate.orm.deprecation" additivity="false" level="INFO">
+		    <RegexFilter regex=".*HHH90000022.*" onMatch="DENY" onMismatch="NEUTRAL"/>
+	
+		</Logger>
+		<Logger name="org.hibernate.tool.schema.internal" additivity="false" level="ERROR">
+		    <RegexFilter regex=".*(java.sql.SQLException: BLOB\/TEXT column).*(used in key specification without a key length).*" onMatch="DENY" onMismatch="NEUTRAL"/>
+		</Logger>
+		<root level="INFO">
+			<appender-ref ref="Console" />
+		</root>
+	</loggers>
+</configuration>
