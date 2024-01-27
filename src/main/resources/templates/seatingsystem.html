@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Seating System</title>
+    <style>
+        .floor {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .seat {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #000;
+            margin: 5px;
+            text-align: center;
+            line-height: 50px;
+            cursor: pointer;
+        }
+
+        .available { background-color: green; }
+        .occupied { background-color: red; }
+        .selected { background-color: yellow; }
+    </style>
+</head>
+<body>
+    <div id="seating-charts"></div>
+    <select id="employee-dropdown"></select>
+    <button onclick="adjustSeat()">Adjust Seat</button>
+
+    <script>
+        async function fetchEmployees() {
+            const response = await fetch('/api/employees');
+            const employees = await response.json();
+            return employees;
+        }
+
+        async function fetchSeatingCharts() {
+            const response = await fetch('/api/seating-charts');
+            const seatingCharts = await response.json();
+            return seatingCharts;
+        }
+
+        async function initializePage() {
+            const employees = await fetchEmployees();
+            const seatingCharts = await fetchSeatingCharts();
+
+            populateEmployeeDropdown(employees);
+            displaySeatingCharts(seatingCharts);
+        }
+
+        function populateEmployeeDropdown(employees) {
+            const dropdown = document.getElementById('employee-dropdown');
+            dropdown.innerHTML = ''; // Clear previous options
+
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.text = 'Select Employee';
+            dropdown.add(defaultOption);
+
+            employees.forEach(employee => {
+                const option = document.createElement('option');
+                option.value = employee.empId;
+                option.text = `${employee.name} (${employee.empId})`;
+                dropdown.add(option);
+            });
+        }
+
+        function displaySeatingCharts(seatingCharts) {
+            const seatingChartsDiv = document.getElementById('seating-charts');
+
+            let currentFloor = -1;
+            let currentRowDiv;
+
+            seatingCharts.forEach(seat => {
+                if (seat.floorNo !== currentFloor) {
+                    // New floor, create a new row div
+                    currentFloor = seat.floorNo;
+                    currentRowDiv = document.createElement('div');
+                    currentRowDiv.className = 'floor';
+                    seatingChartsDiv.appendChild(currentRowDiv);
+                }
+
+                const seatDiv = document.createElement('div');
+                seatDiv.className = `seat ${seat.status}`;
+                seatDiv.dataset.floorSeatSeq = seat.floorSeatSeq;
+                seatDiv.dataset.floorNo = seat.floorNo;
+                seatDiv.dataset.seatNo = seat.seatNo;
+                seatDiv.innerText = `${seat.floorNo}-${seat.seatNo}`;
+                seatDiv.onclick = () => selectSeat(seatDiv);
+
+                currentRowDiv.appendChild(seatDiv);
+            });
+        }
+
+        function selectSeat(seatDiv) {
+            const selectedSeat = document.querySelector('.selected');
+            if (selectedSeat) {
+                selectedSeat.classList.remove('selected');
+            }
+
+            seatDiv.classList.add('selected');
+
+            // Populate employee dropdown with the employee currently reserved for this seat
+            const employeeDropdown = document.getElementById('employee-dropdown');
+            const floorSeatSeq = seatDiv.dataset.floorSeatSeq;
+            const selectedEmployee = seatingCharts.find(seat => seat.floorSeatSeq === floorSeatSeq)?.employee;
+            employeeDropdown.value = selectedEmployee ? selectedEmployee.empId : '';
+        }
+
+        async function adjustSeat() {
+            const selectedSeat = document.querySelector('.selected');
+            const employeeDropdown = document.getElementById('employee-dropdown');
+            const employeeId = employeeDropdown.value;
+
+            if (!selectedSeat || !employeeId) {
+                alert('Please select a seat and an employee.');
+                return;
+            }
+
+            if (selectedSeat.classList.contains('occupied')) {
+                alert('This seat is already occupied.');
+                return;
+            }
+
+            const floorSeatSeq = selectedSeat.dataset.floorSeatSeq;
+
+            const request = {
+                floorSeatSeq: floorSeatSeq,
+                employeeId: employeeId
+            };
+
+            try {
+                const response = await fetch('/api/seating-chart/adjust-seat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(request),
+                });
+
+                const data = await response.json();
+                alert(data.message);
+
+                selectedSeat.classList.add('occupied');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        window.onload = initializePage;
+    </script>
+</body>
+</html>
